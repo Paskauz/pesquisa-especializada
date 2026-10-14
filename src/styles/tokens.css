@@ -1,0 +1,25 @@
+/* Paleta e medidas compartilhadas entre as telas (login, início e perfil). */
+:root {
+  --bg: #f4f5f8;
+  --card-bg: #ffffff;
+  --border: #e5e7eb;
+  --border-soft: #f3f4f6;
+  --text-primary: #111827;
+  --text: #1f2937;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --accent: #5243ed;
+  --accent-hover: #4335c9;
+  --accent-bg: #f3f0ff;
+  --accent-border: #c7d2fe;
+  --on-accent: #ffffff;
+  --field-bg: #f9fafb;
+  --success-bg: #ecfdf5;
+  --success-text: #047857;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --radius: 8px;
+  --radius-lg: 16px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  --font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+}
