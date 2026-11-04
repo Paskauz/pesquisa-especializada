@@ -4,9 +4,11 @@ import HomeScreen from './components/HomeScreen.jsx';
 import ProfileScreen from './components/ProfileScreen.jsx';
 
 export default function App() {
-  const { screen, isLogged, toast } = useApp();
+  const { screen, isLogged, toast, booting } = useApp();
 
-  // Sem backend: só mostra início/perfil se existir sessão local.
+  if (booting) return null;
+
+  // Início/perfil só aparecem com sessão válida no servidor.
   const current = isLogged ? screen : 'login';
 
   return (

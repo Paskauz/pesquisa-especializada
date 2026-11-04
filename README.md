@@ -1,66 +1,67 @@
 # Busca especializada
 
-Frontend unificado da atividade **Busca especializada** (Unifor). O projeto reúne os protótipos de login, tela principal e perfil em uma aplicação **React + Vite**, organizada em **HTML5**, **CSS3** e **JavaScript**.
+Aplicação da atividade **Busca especializada** (Unifor): login, busca de documentos acadêmicos, acesso rápido, agenda e perfil. Agora com **banco MySQL** e uma **API Node/Express** entre o React e o banco.
 
-Não há backend: a demonstração usa dados fictícios e sessão no `localStorage`.
+```
+React (Vite)  ──/api──▶  Express (server/)  ──mysql2──▶  MySQL 8
+```
 
-## O que foi unificado
+## Como rodar
 
-Os arquivos originais ficaram em `prototipos/` para referência:
-
-- `busca-especializada-login.html` — entrar, criar conta, recuperar senha e matrícula Unifor
-- `Tela Principal.html` — busca, acesso rápido e agenda
-- `tela_de_perfil.html` — dados do aluno, interesses e notificações
-- `Busca_Especializada.tsx` — rascunho React com as três telas no mesmo arquivo
-
-A versão atual separa estrutura, estilo e comportamento:
-
-| Camada | Onde está |
-| --- | --- |
-| HTML5 | `index.html` e a marcação dos componentes React |
-| CSS3 | `src/styles/` (`tokens`, `base`, `components`, `auth`, `home`, `profile`) |
-| JavaScript | `src/` (React, contexto da demo e dados mock) |
-
-## Como rodar a demonstração
-
-Requisitos: [Node.js](https://nodejs.org/) 18+ e npm.
+Requisitos: Node.js 18+ e **MySQL 8** (a collation `utf8mb4_0900_ai_ci`, que ignora acentos, não existe no MariaDB).
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env      # ajuste DB_USER / DB_PASSWORD
+npm run db:setup          # cria o banco busca_especializada, as tabelas e os dados iniciais
+npm run api               # terminal 1: API em http://localhost:3001
+npm run dev               # terminal 2: front em http://localhost:5173
 ```
 
-O Vite abre o endereço local (em geral `http://localhost:5173`).
+Login de demonstração (criado pelo seed): `gabriel@edu.unifor.br` / `123456` (ou matrícula `2110482`).
 
-Outros comandos:
+Produção: `npm run build && npm start` — a API serve o front gerado em `dist/`.
 
-```bash
-npm run build    # gera a pasta dist/
-npm run preview  # serve o build para apresentar sem modo de desenvolvimento
-```
+Sem o script, também dá para rodar `server/schema.mysql.sql` e depois `server/seed.mysql.sql` direto no MySQL Workbench.
 
-## Roteiro rápido para apresentar
+## O que mudou
 
-1. Na tela **Entrar**, use `gabriel@edu.unifor.br` / `123456` (ou qualquer valor preenchido).
-2. Pesquise termos como `Inteligência Artificial`, `Medicina` ou `Direito`.
-3. Abra **Meu Perfil**, altere nome/interesses e clique em **Salvar Alterações**.
-4. Use **Sair da Conta** para voltar ao login.
+| Antes | Agora |
+| --- | --- |
+| `src/data/mockData.js` | Tabelas MySQL (`server/schema.mysql.sql`) + seed (`server/seed.mysql.sql`) |
+| Sessão no `localStorage` | Tabela `sessoes` + cookie httpOnly |
+| Filtro `.includes()` no navegador | `GET /api/documentos` (SQL com `LIKE`, sem acento/maiúsculas) |
+| "Populares" fixo | View `termos_populares`, calculada do `historico_buscas` |
+| Cards de Acesso Rápido por texto livre | Filtro exato por fonte (`recursos_rapidos.filtro_fonte_id`) |
+| Perfil salvo só em memória | `PUT /api/me` grava dados, interesses e notificações |
 
-A sessão permanece no navegador até você sair. Nada é enviado a um servidor.
+## API
+
+| Rota | O que faz |
+| --- | --- |
+| `POST /api/auth/signup` · `login` · `logout` | Conta e sessão. `login` aceita e-mail ou matrícula |
+| `POST /api/auth/forgot` · `reset` | Redefinição de senha (o link aparece no console da API; ainda sem envio de e-mail) |
+| `GET /api/me` · `PUT /api/me` | Perfil do usuário logado |
+| `GET /api/catalogo` | Áreas, buscas populares, acesso rápido e agenda |
+| `GET /api/documentos?q=&fonte=` | Busca de documentos (grava em `historico_buscas`) |
 
 ## Estrutura
 
 ```
-index.html                 # documento HTML5
-src/main.jsx               # inicia o React
-src/App.jsx                # escolhe a tela (login, início ou perfil)
-src/context/AppContext.jsx # estado da demo (usuário, busca, toast)
-src/data/mockData.js       # documentos, eventos e usuário fictício
+server/index.js            # API Express (rotas, sessão, buscas)
+server/db.js               # conexão MySQL (variáveis do .env)
+server/db-setup.js         # npm run db:setup
+server/schema.mysql.sql    # tabelas, view e triggers
+server/seed.mysql.sql      # dados do antigo mockData.js
+src/api.js                 # cliente fetch da API
+src/context/AppContext.jsx # estado do app (usuário, busca, catálogo)
 src/components/            # telas e cabeçalho
-src/styles/                # CSS3 separado por responsabilidade
 prototipos/                # HTMLs e TSX originais
 ```
 
-## Próximo passo (fora deste projeto)
+## Pendências conhecidas
 
-Integração com API real de autenticação, acervo e perfil. Este repositório para na camada de frontend para poder ser demonstrado agora.
+- **Login por matrícula:** hoje valida a senha cadastrada no próprio sistema. Para usar a senha institucional, integrar com o SSO/LDAP da Unifor.
+- **E-mails:** redefinição de senha e alertas de novos documentos gravam no banco (`tokens_redefinicao_senha`, `notificacoes`), mas falta um serviço de envio.
+- **Tela de nova senha:** a rota `POST /api/auth/reset` existe; falta a tela que recebe o link `/?reset=...`.
+- **Lista de notificações:** o sino do cabeçalho ainda não abre a lista (`notificacoes` já recebe os alertas).

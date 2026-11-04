@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import Header from './Header.jsx';
 import { useApp } from '../context/AppContext.jsx';
-import { ALL_INTERESTS } from '../data/mockData.js';
 
 export default function ProfileScreen() {
   const {
@@ -23,20 +22,15 @@ export default function ProfileScreen() {
     setScreen,
     profileSection,
     setProfileSection,
-    toggleInterest
+    toggleInterest,
+    saveProfile,
+    reloadUser,
+    catalog
   } = useApp();
 
-  const saveProfile = () => {
-    setUser((prev) => ({
-      ...prev,
-      initials: prev.name
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part[0].toUpperCase())
-        .join('')
-    }));
-    notify('Alterações salvas localmente nesta demonstração.');
+  const cancel = () => {
+    reloadUser(); // descarta o que não foi salvo
+    setScreen('home');
   };
 
   const showPessoal = profileSection === 'pessoal';
@@ -172,7 +166,7 @@ export default function ProfileScreen() {
                       Áreas de Interesse Principal
                     </label>
                     <div className="tags">
-                      {ALL_INTERESTS.map((interest) => {
+                      {catalog.areas.map((interest) => {
                         const selected = user.interests.includes(interest);
                         return (
                           <button
@@ -231,7 +225,7 @@ export default function ProfileScreen() {
                 )}
 
                 <div className="panel-actions">
-                  <button type="button" className="btn btn-ghost" onClick={() => setScreen('home')}>
+                  <button type="button" className="btn btn-ghost" onClick={cancel}>
                     Cancelar
                   </button>
                   <button type="button" className="btn btn-primary" onClick={saveProfile}>

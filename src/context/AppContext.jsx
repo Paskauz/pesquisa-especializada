@@ -1,46 +1,24 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { DEMO_USER, DOCUMENTS } from '../data/mockData.js';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { api } from '../api.js';
 
-const STORAGE_KEY = 'busca-especializada-demo';
 const AppContext = createContext(null);
-
-function initialsFrom(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join('');
-}
-
-function loadSession() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
+const EMPTY_CATALOG = { areas: [], termosPopulares: [], recursos: [], eventos: [] };
 
 export function AppProvider({ children }) {
-  const saved = loadSession();
-
-  // Tela atual da demo: login | home | profile
-  const [screen, setScreen] = useState(saved?.isLogged ? 'home' : 'login');
+  const [booting, setBooting] = useState(true); // checando a sessão no servidor
+  const [screen, setScreen] = useState('login');
   const [authTab, setAuthTab] = useState('login');
-  const [user, setUser] = useState(saved?.user ?? { ...DEMO_USER });
-  const [isLogged, setIsLogged] = useState(Boolean(saved?.isLogged));
+  const [user, setUser] = useState(null);
+  const [catalog, setCatalog] = useState(EMPTY_CATALOG);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [toast, setToast] = useState('');
   const [profileSection, setProfileSection] = useState('pessoal');
 
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ isLogged, user })
-    );
-  }, [isLogged, user]);
+  const isLogged = Boolean(user);
+  const notify = (message) => setToast(message);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -48,27 +26,53 @@ export function AppProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const notify = (message) => setToast(message);
-
-  // Login da demo: marca o usuário como autenticado e guarda no navegador.
-  const login = (payload = {}) => {
-    const nextUser = {
-      ...user,
-      ...payload,
-      initials: initialsFrom(payload.name || user.name)
-    };
-    setUser(nextUser);
-    setIsLogged(true);
-    setScreen('home');
-    notify('Sessão iniciada (demo, sem backend).');
+  const loadCatalog = async () => {
+    try {
+      setCatalog(await api('/catalogo'));
+    } catch (err) {
+      notify(err.message);
+    }
   };
 
-  const logout = () => {
-    setIsLogged(false);
+  const enter = (usuario) => {
+    setUser(usuario);
+    setScreen('home');
+    loadCatalog();
+  };
+
+  // Ao abrir o app, pergunta ao servidor se já existe sessão (cookie).
+  useEffect(() => {
+    api('/me')
+      .then(({ usuario }) => enter(usuario))
+      .catch(() => {})
+      .finally(() => setBooting(false));
+  }, []);
+
+  const signIn = async (identificador, senha) => {
+    const { usuario } = await api('/auth/login', { method: 'POST', body: { identificador, senha } });
+    enter(usuario);
+  };
+
+  const signUp = async (nome, email, senha) => {
+    const { usuario } = await api('/auth/signup', { method: 'POST', body: { nome, email, senha } });
+    enter(usuario);
+    notify('Conta criada com sucesso.');
+  };
+
+  const forgotPassword = async (email) => {
+    const { mensagem } = await api('/auth/forgot', { method: 'POST', body: { email } });
+    notify(mensagem);
+    setAuthTab('login');
+  };
+
+  const logout = async () => {
+    await api('/auth/logout', { method: 'POST' }).catch(() => {});
+    setUser(null);
     setScreen('login');
     setAuthTab('login');
     setActiveQuery('');
     setSearchQuery('');
+    setSearchResults([]);
     notify('Você saiu da conta.');
   };
 
@@ -77,25 +81,32 @@ export function AppProvider({ children }) {
     setScreen('home');
   };
 
-  const runSearch = (term = searchQuery) => {
+  // filter: { fonte, label } — usado pelos cards de Acesso Rápido.
+  const runSearch = async (term = searchQuery, filter = null) => {
     const query = term.trim();
     setSearchQuery(query);
-    setActiveQuery(query);
     setScreen('home');
-    if (!query) {
+    if (!query && !filter) {
+      setActiveQuery('');
+      setSearchResults([]);
       notify('Digite um termo para pesquisar.');
       return;
     }
-    notify(`Buscando por "${query}" nos dados de demonstração.`);
+    setActiveQuery(query || filter.label);
+    setSearching(true);
+    try {
+      const params = new URLSearchParams();
+      if (query) params.set('q', query);
+      if (filter?.fonte) params.set('fonte', filter.fonte);
+      const { documentos } = await api(`/documentos?${params}`);
+      setSearchResults(documentos);
+    } catch (err) {
+      setSearchResults([]);
+      notify(err.message);
+    } finally {
+      setSearching(false);
+    }
   };
-
-  const searchResults = useMemo(() => {
-    if (!activeQuery) return [];
-    const q = activeQuery.toLowerCase();
-    return DOCUMENTS.filter((doc) =>
-      [doc.title, doc.author, doc.area, doc.type, doc.source].join(' ').toLowerCase().includes(q)
-    );
-  }, [activeQuery]);
 
   const toggleInterest = (interest) => {
     setUser((prev) => {
@@ -106,27 +117,33 @@ export function AppProvider({ children }) {
     });
   };
 
+  const saveProfile = async () => {
+    try {
+      const { usuario } = await api('/me', { method: 'PUT', body: user });
+      setUser(usuario);
+      notify('Alterações salvas.');
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+  // Descarta edições não salvas recarregando o perfil do servidor.
+  const reloadUser = async () => {
+    try {
+      const { usuario } = await api('/me');
+      setUser(usuario);
+    } catch {
+      /* mantém o estado atual */
+    }
+  };
+
   const value = {
-    screen,
-    setScreen,
-    authTab,
-    setAuthTab,
-    user,
-    setUser,
-    isLogged,
-    login,
-    logout,
-    goHome,
-    toggleInterest,
-    searchQuery,
-    setSearchQuery,
-    activeQuery,
-    runSearch,
-    searchResults,
-    toast,
-    notify,
-    profileSection,
-    setProfileSection
+    booting, screen, setScreen, authTab, setAuthTab,
+    user, setUser, isLogged, catalog,
+    signIn, signUp, forgotPassword, logout, goHome,
+    toggleInterest, saveProfile, reloadUser,
+    searchQuery, setSearchQuery, activeQuery, runSearch, searchResults, searching,
+    toast, notify, profileSection, setProfileSection
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -134,8 +151,6 @@ export function AppProvider({ children }) {
 
 export function useApp() {
   const ctx = useContext(AppContext);
-  if (!ctx) {
-    throw new Error('useApp deve ser usado dentro de AppProvider');
-  }
+  if (!ctx) throw new Error('useApp deve ser usado dentro de AppProvider');
   return ctx;
 }

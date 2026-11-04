@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import Header from './Header.jsx';
 import { useApp } from '../context/AppContext.jsx';
-import { EVENTS, POPULAR_TAGS, QUICK_RESOURCES } from '../data/mockData.js';
 
 const ICONS = {
   book: BookOpen,
@@ -26,12 +25,13 @@ export default function HomeScreen() {
     runSearch,
     activeQuery,
     searchResults,
-    notify
+    searching,
+    catalog
   } = useApp();
 
+  // Cada card filtra pela fonte cadastrada no banco (recursos_rapidos.filtro_fonte_id).
   const openResource = (resource) => {
-    runSearch(resource.query);
-    notify(`Filtro de demonstração: ${resource.title}`);
+    runSearch('', { fonte: resource.fonte, label: resource.title });
   };
 
   return (
@@ -64,7 +64,7 @@ export default function HomeScreen() {
             </form>
             <div className="quick-tags">
               <span>Populares:</span>
-              {POPULAR_TAGS.map((tag) => (
+              {catalog.termosPopulares.map((tag) => (
                 <button
                   key={tag}
                   type="button"
@@ -85,9 +85,11 @@ export default function HomeScreen() {
               <h2 className="section-title">
                 Resultados para “{activeQuery}”
               </h2>
-              {searchResults.length === 0 ? (
+              {searching ? (
+                <p className="empty-state">Buscando…</p>
+              ) : searchResults.length === 0 ? (
                 <p className="empty-state">
-                  Nenhum documento de demonstração encontrado. Tente Inteligência Artificial, Medicina ou Direito.
+                  Nenhum documento encontrado. Tente outro termo ou uma das buscas populares.
                 </p>
               ) : (
                 <div className="results-list">
@@ -110,7 +112,7 @@ export default function HomeScreen() {
             <section>
               <h2 className="section-title">Acesso Rápido</h2>
               <div className="resources-grid">
-                {QUICK_RESOURCES.map((resource) => {
+                {catalog.recursos.map((resource) => {
                   const Icon = ICONS[resource.icon];
                   return (
                     <article key={resource.id} className="card resource-card">
@@ -144,8 +146,8 @@ export default function HomeScreen() {
               Principais eventos acadêmicos e culturais
             </p>
             <div className="event-list">
-              {EVENTS.map((event) => (
-                <div key={event.title} className="event-item">
+              {catalog.eventos.map((event) => (
+                <div key={event.id} className="event-item">
                   <div className="date-badge">
                     <span className="day">{event.day}</span>
                     <span className="month">{event.month}</span>

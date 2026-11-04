@@ -1,0 +1,192 @@
+/* Responsividade. Carregado por último para ajustar as telas em qualquer largura. */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Nunca deixa a página criar rolagem horizontal. */
+body {
+  overflow-x: hidden;
+}
+
+.result-card h3,
+.card h3 {
+  overflow-wrap: anywhere;
+}
+
+/* Itens de grid precisam poder encolher, senão o conteúdo estoura a tela. */
+.page-main > *,
+.profile-grid > * {
+  min-width: 0;
+}
+
+/* Barra inferior (só aparece no celular) */
+.bottom-nav {
+  display: none;
+}
+
+/* ---------- Tablet ---------- */
+@media (max-width: 1024px) {
+  .page-main {
+    padding: 24px 16px;
+  }
+}
+
+/* ---------- Celular / tablet pequeno ---------- */
+@media (max-width: 800px) {
+  .site-header__inner {
+    gap: 8px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  .brand svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    background: none;
+    border: none;
+    border-radius: 10px;
+    padding: 6px 4px;
+    min-height: 48px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    transition: color 0.15s, background-color 0.15s, transform 0.1s;
+  }
+
+  .bottom-nav button.is-active {
+    color: var(--accent);
+    background: var(--accent-bg);
+  }
+
+  .bottom-nav button:active {
+    transform: scale(0.95);
+  }
+
+  /* abre espaço para a barra não cobrir o fim da página */
+  .app-shell {
+    padding-bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+
+  .toast {
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    text-align: center;
+  }
+
+  .page-main {
+    padding: 16px 12px;
+    gap: 20px;
+  }
+
+  .profile-main {
+    padding: 16px 12px 32px;
+  }
+
+  /* Campo de busca: botão desce para não espremer o texto */
+  .search-hero {
+    padding: 20px 16px;
+  }
+
+  .search-box {
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .search-box input {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .search-box .btn {
+    width: 100%;
+  }
+
+  .search-hero h1 {
+    font-size: 22px;
+  }
+
+  .result-meta {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- Celulares estreitos ---------- */
+@media (max-width: 480px) {
+  .site-header {
+    padding: 10px 12px;
+  }
+
+  .auth-page {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .auth-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .demo-hint {
+    font-size: 11px;
+  }
+
+  .search-hero h1 {
+    font-size: 20px;
+  }
+}
+
+/* Telas muito pequenas: some o nome ao lado do ícone no topo */
+@media (max-width: 360px) {
+  .brand span {
+    display: none;
+  }
+}
+
+/* ---------- Touch ---------- */
+@media (pointer: coarse) {
+  .btn,
+  .field {
+    min-height: 44px;
+  }
+
+  .tag,
+  .nav-link,
+  .link-btn {
+    min-height: 36px;
+  }
+
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* 16px evita o zoom automático ao focar o campo no iPhone */
+  .field input,
+  .search-box input {
+    font-size: 16px;
+  }
+}

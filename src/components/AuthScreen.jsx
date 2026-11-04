@@ -10,7 +10,9 @@ import {
   User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
-import { DEMO_USER } from '../data/mockData.js';
+
+// Usuário criado pelo seed do banco (server/seed.mysql.sql).
+const DEMO = { email: 'gabriel@edu.unifor.br', password: '123456', matricula: '2110482' };
 
 function Field({ icon, ...inputProps }) {
   return (
@@ -22,14 +24,14 @@ function Field({ icon, ...inputProps }) {
 }
 
 export default function AuthScreen() {
-  const { authTab, setAuthTab, login, notify, user } = useApp();
+  const { authTab, setAuthTab, signIn, signUp, forgotPassword } = useApp();
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    identifier: DEMO_USER.email,
-    password: DEMO_USER.password,
-    name: DEMO_USER.name,
-    email: DEMO_USER.email,
-    matricula: DEMO_USER.matricula
+    identifier: DEMO.email,
+    password: DEMO.password,
+    name: '',
+    email: '',
+    matricula: DEMO.matricula
   });
 
   const update = (key) => (event) => {
@@ -37,42 +39,37 @@ export default function AuthScreen() {
     setError('');
   };
 
-  const submitLogin = (event) => {
+  // Executa a chamada à API e mostra o erro do servidor no formulário.
+  const run = (validate, action) => async (event) => {
     event.preventDefault();
-    if (!form.identifier.trim() || !form.password.trim()) {
-      setError('Preencha e-mail/usuário e senha para entrar.');
-      return;
+    const problem = validate();
+    if (problem) return setError(problem);
+    try {
+      await action();
+    } catch (err) {
+      setError(err.message);
     }
-    login({ email: form.identifier });
   };
 
-  const submitSignup = (event) => {
-    event.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      setError('Preencha nome, e-mail e senha para criar a conta.');
-      return;
-    }
-    login({ name: form.name, email: form.email });
-  };
+  const submitLogin = run(
+    () => (!form.identifier.trim() || !form.password.trim() ? 'Preencha e-mail/usuário e senha para entrar.' : ''),
+    () => signIn(form.identifier, form.password)
+  );
 
-  const submitForgot = (event) => {
-    event.preventDefault();
-    if (!form.email.trim()) {
-      setError('Informe o e-mail cadastrado.');
-      return;
-    }
-    notify('Link de redefinição simulado. Volte ao login para continuar.');
-    setAuthTab('login');
-  };
+  const submitSignup = run(
+    () => (!form.name.trim() || !form.email.trim() || !form.password.trim() ? 'Preencha nome, e-mail e senha para criar a conta.' : ''),
+    () => signUp(form.name, form.email, form.password)
+  );
 
-  const submitMatricula = (event) => {
-    event.preventDefault();
-    if (!form.matricula.trim() || !form.password.trim()) {
-      setError('Informe matrícula e senha institucional.');
-      return;
-    }
-    login({ matricula: form.matricula, email: user.email });
-  };
+  const submitForgot = run(
+    () => (!form.email.trim() ? 'Informe o e-mail cadastrado.' : ''),
+    () => forgotPassword(form.email)
+  );
+
+  const submitMatricula = run(
+    () => (!form.matricula.trim() || !form.password.trim() ? 'Informe matrícula e senha institucional.' : ''),
+    () => signIn(form.matricula, form.password)
+  );
 
   return (
     <div className="auth-page">
@@ -205,7 +202,7 @@ export default function AuthScreen() {
       </section>
 
       <p className="demo-hint">
-        Demo sem servidor: use {DEMO_USER.email} / {DEMO_USER.password} ou qualquer dado preenchido.
+        Demo: use {DEMO.email} / {DEMO.password} (usuário criado pelo seed do banco).
       </p>
     </div>
   );
