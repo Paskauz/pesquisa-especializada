@@ -19,6 +19,7 @@ npm run dev               # terminal 2: front em http://localhost:5173
 ```
 
 Login de demonstração (criado pelo seed): `gabriel@edu.unifor.br` / `123456` (ou matrícula `2110482`).
+Se o MySQL não estiver disponível no ambiente, a API entra automaticamente em modo demonstração e mantém esse usuário funcionando para apresentação.
 
 Produção: `npm run build && npm start` — a API serve o front gerado em `dist/`.
 

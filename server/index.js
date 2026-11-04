@@ -4,7 +4,15 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
-import { pool } from './db.js';
+import { pool, isDemoMode } from './db.js';
+import {
+  DEMO_USER,
+  ALL_INTERESTS,
+  POPULAR_TAGS,
+  QUICK_RESOURCES,
+  EVENTS,
+  DOCUMENTS
+} from '../src/data/mockData.js';
 
 const PROD = process.env.NODE_ENV === 'production';
 const PORT = Number(process.env.PORT || 3001);
@@ -23,6 +31,59 @@ const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e || '');
 const iniciais = (nome) =>
   nome.split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
 
+const DEMO_USER_ID = 1;
+const demoSessions = new Map();
+const demoUsers = new Map([[DEMO_USER_ID, { ...DEMO_USER, id: DEMO_USER_ID }]]);
+const demoModeForced = () => isDemoMode || ['1', 'true', 'yes'].includes(String(process.env.USE_DEMO || '').toLowerCase());
+
+function serializarUsuario(usuario) {
+  return {
+    id: usuario.id,
+    name: usuario.name,
+    email: usuario.email,
+    matricula: usuario.matricula || '',
+    course: usuario.course || '',
+    initials: usuario.initials || iniciais(usuario.name),
+    notificationsEmail: Boolean(usuario.notificationsEmail),
+    notificationsDocAlerts: Boolean(usuario.notificationsDocAlerts),
+    interests: Array.isArray(usuario.interests) ? usuario.interests : []
+  };
+}
+
+function demoUserByCredentials(identificador, senha) {
+  const identifier = String(identificador || '').trim().toLowerCase();
+  if (String(senha || '') !== DEMO_USER.password) return null;
+  if (identifier === DEMO_USER.email.toLowerCase() || identifier === String(DEMO_USER.matricula)) {
+    return demoUsers.get(DEMO_USER_ID);
+  }
+  return null;
+}
+
+function criarSessaoDemo(res, usuarioId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  demoSessions.set(token, usuarioId);
+  res.cookie(COOKIE, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: PROD,
+    maxAge: SESSAO_DIAS * 864e5
+  });
+  return token;
+}
+
+async function ensureDemoMode() {
+  if (demoModeForced()) {
+    return true;
+  }
+  try {
+    await pool.query('SELECT 1');
+    return false;
+  } catch {
+    console.warn('[demo-mode] MySQL indisponível. Utilizando dados locais para apresentação.');
+    return true;
+  }
+}
+
 // ---------- sessão ----------
 async function criarSessao(req, res, usuarioId) {
   const token = crypto.randomBytes(32).toString('hex');
@@ -37,6 +98,16 @@ async function criarSessao(req, res, usuarioId) {
 }
 
 const exigirLogin = handler(async (req, res, next) => {
+  if (await ensureDemoMode()) {
+    const token = req.cookies[COOKIE];
+    const usuarioId = demoSessions.get(token);
+    if (usuarioId) {
+      req.usuarioId = usuarioId;
+      return next();
+    }
+    return res.status(401).json({ erro: 'Sessão expirada. Entre novamente.' });
+  }
+
   const token = req.cookies[COOKIE];
   if (token) {
     const [rows] = await pool.query(
@@ -54,6 +125,11 @@ const exigirLogin = handler(async (req, res, next) => {
 
 // Monta o usuário no mesmo formato que o front já usava (DEMO_USER).
 async function carregarUsuario(id) {
+  if (await ensureDemoMode()) {
+    const usuario = demoUsers.get(Number(id)) || demoUsers.get(DEMO_USER_ID);
+    return usuario ? serializarUsuario(usuario) : null;
+  }
+
   const [[u]] = await pool.query(
     `SELECT u.id, u.nome, u.email, u.matricula, c.nome AS curso, ce.sigla,
             p.notif_email, p.notif_alertas_docs
@@ -82,6 +158,27 @@ async function carregarUsuario(id) {
 const auth = express.Router();
 
 auth.post('/signup', handler(async (req, res) => {
+  if (await ensureDemoMode()) {
+    const { nome = '', email = '', senha = '' } = req.body;
+    if (!nome.trim() || !emailValido(email) || senha.length < 6) {
+      return res.status(400).json({ erro: 'Informe nome, e-mail válido e senha com 6+ caracteres.' });
+    }
+    const usuario = {
+      id: Date.now(),
+      name: nome.trim(),
+      email: email.trim(),
+      matricula: '',
+      course: '',
+      initials: iniciais(nome.trim()),
+      notificationsEmail: true,
+      notificationsDocAlerts: true,
+      interests: []
+    };
+    demoUsers.set(usuario.id, usuario);
+    criarSessaoDemo(res, usuario.id);
+    return res.status(201).json({ usuario: serializarUsuario(usuario) });
+  }
+
   const { nome = '', email = '', senha = '' } = req.body;
   if (!nome.trim() || !emailValido(email) || senha.length < 6) {
     return res.status(400).json({ erro: 'Informe nome, e-mail válido e senha com 6+ caracteres.' });
@@ -99,12 +196,21 @@ auth.post('/signup', handler(async (req, res) => {
   }
 }));
 
-// "identificador" aceita e-mail ou matrícula (as duas abas do login usam esta rota).
 auth.post('/login', handler(async (req, res) => {
   const { identificador = '', senha = '' } = req.body;
   if (!identificador.trim() || !senha) {
     return res.status(400).json({ erro: 'Preencha e-mail/matrícula e senha para entrar.' });
   }
+
+  if (await ensureDemoMode()) {
+    const usuario = demoUserByCredentials(identificador, senha);
+    if (!usuario) {
+      return res.status(401).json({ erro: 'Credenciais inválidas.' });
+    }
+    criarSessaoDemo(res, usuario.id);
+    return res.json({ usuario: serializarUsuario(usuario) });
+  }
+
   const [rows] = await pool.query(
     `SELECT id, senha_hash, situacao FROM usuarios WHERE email = ? OR matricula = ? LIMIT 1`,
     [identificador.trim(), identificador.trim()]);
@@ -117,6 +223,13 @@ auth.post('/login', handler(async (req, res) => {
 }));
 
 auth.post('/logout', handler(async (req, res) => {
+  if (await ensureDemoMode()) {
+    const token = req.cookies[COOKIE];
+    if (token) demoSessions.delete(token);
+    res.clearCookie(COOKIE);
+    return res.json({ ok: true });
+  }
+
   const token = req.cookies[COOKIE];
   if (token) {
     await pool.query('UPDATE sessoes SET revogada_em = NOW() WHERE token_hash = ?', [sha256(token)]);
@@ -125,11 +238,16 @@ auth.post('/logout', handler(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// Sempre responde igual, exista ou não o e-mail (não revela quem tem conta).
-// Sem servidor de e-mail ainda: o link aparece no console da API.
 auth.post('/forgot', handler(async (req, res) => {
   const email = (req.body.email || '').trim();
   if (!emailValido(email)) return res.status(400).json({ erro: 'Informe o e-mail cadastrado.' });
+
+  if (await ensureDemoMode()) {
+    const token = crypto.randomBytes(32).toString('hex');
+    console.log(`[redefinir senha] ${email}: ${APP_URL}/?reset=${token}`);
+    return res.json({ mensagem: 'Se o e-mail estiver cadastrado, você receberá um link de redefinição.' });
+  }
+
   const [rows] = await pool.query('SELECT id FROM usuarios WHERE email = ?', [email]);
   if (rows.length) {
     const token = crypto.randomBytes(32).toString('hex');
@@ -144,6 +262,14 @@ auth.post('/forgot', handler(async (req, res) => {
 auth.post('/reset', handler(async (req, res) => {
   const { token = '', senha = '' } = req.body;
   if (senha.length < 6) return res.status(400).json({ erro: 'A senha precisa ter 6+ caracteres.' });
+
+  if (await ensureDemoMode()) {
+    if (!token || token.length < 8) {
+      return res.status(400).json({ erro: 'Link inválido ou expirado.' });
+    }
+    return res.json({ ok: true });
+  }
+
   const [rows] = await pool.query(
     `SELECT id, usuario_id FROM tokens_redefinicao_senha
      WHERE token_hash = ? AND usado_em IS NULL AND expira_em > NOW()`, [sha256(token)]);
@@ -163,11 +289,35 @@ const api = express.Router();
 api.use(exigirLogin);
 
 api.get('/me', handler(async (req, res) => {
-  res.json({ usuario: await carregarUsuario(req.usuarioId) });
+  const usuario = await carregarUsuario(req.usuarioId);
+  res.json({ usuario });
 }));
 
-// Salva a tela de perfil inteira de uma vez (dados + interesses + notificações).
 api.put('/me', handler(async (req, res) => {
+  if (await ensureDemoMode()) {
+    const { name = '', email = '', course = '', interests = [],
+            notificationsEmail = true, notificationsDocAlerts = true } = req.body;
+    if (!name.trim() || !emailValido(email)) {
+      return res.status(400).json({ erro: 'Informe nome e um e-mail válido.' });
+    }
+    const usuario = demoUsers.get(Number(req.usuarioId)) || demoUsers.get(DEMO_USER_ID);
+    if (!usuario) {
+      return res.status(404).json({ erro: 'Usuário não encontrado.' });
+    }
+    const atualizado = {
+      ...usuario,
+      name: name.trim(),
+      email: email.trim(),
+      course: course.trim(),
+      initials: iniciais(name.trim()),
+      notificationsEmail: Boolean(notificationsEmail),
+      notificationsDocAlerts: Boolean(notificationsDocAlerts),
+      interests: Array.isArray(interests) ? interests : []
+    };
+    demoUsers.set(usuario.id, atualizado);
+    return res.json({ usuario: serializarUsuario(atualizado) });
+  }
+
   const { name = '', email = '', course = '', interests = [],
           notificationsEmail = true, notificationsDocAlerts = true } = req.body;
   if (!name.trim() || !emailValido(email)) {
@@ -177,7 +327,6 @@ api.put('/me', handler(async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // "Ciência da Computação - CCT" → curso + centro
     let cursoId = null;
     const [nomeCurso, sigla] = course.split(' - ').map((s) => s.trim());
     if (nomeCurso) {
@@ -214,9 +363,31 @@ api.put('/me', handler(async (req, res) => {
   res.json({ usuario: await carregarUsuario(req.usuarioId) });
 }));
 
-// Tudo que a home e o perfil precisam em uma chamada (substitui ALL_INTERESTS,
-// POPULAR_TAGS, QUICK_RESOURCES e EVENTS do mockData).
 api.get('/catalogo', handler(async (_req, res) => {
+  if (await ensureDemoMode()) {
+    const recursos = QUICK_RESOURCES.map((item) => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      action: item.action,
+      icon: item.icon,
+      fonte: item.query || 'Biblioteca'
+    }));
+    return res.json({
+      areas: ALL_INTERESTS,
+      termosPopulares: POPULAR_TAGS,
+      recursos,
+      eventos: EVENTS.map((evento, index) => ({
+        id: index + 1,
+        title: evento.title,
+        place: evento.place,
+        tag: evento.tag,
+        day: evento.day,
+        month: evento.month
+      }))
+    });
+  }
+
   const [areas] = await pool.query('SELECT nome FROM areas ORDER BY nome');
   const [populares] = await pool.query('SELECT termo FROM termos_populares LIMIT 4');
   const [recursos] = await pool.query(
@@ -240,11 +411,21 @@ api.get('/catalogo', handler(async (_req, res) => {
   });
 }));
 
-// Busca: cada palavra precisa aparecer em título, resumo, autor, área, tipo ou fonte
-// (a collation do banco ignora acento e maiúsculas). Mesma regra do filtro do mock.
 const like = (t) => `%${t.replace(/[\\%_]/g, '\\$&')}%`;
 
 api.get('/documentos', handler(async (req, res) => {
+  if (await ensureDemoMode()) {
+    const q = String(req.query.q || '').trim();
+    const fonte = String(req.query.fonte || '').trim();
+    const filtered = DOCUMENTS.filter((doc) => {
+      const matchesQuery = !q || [doc.title, doc.type, doc.author, doc.area, doc.source].some((value) =>
+        String(value).toLowerCase().includes(q.toLowerCase()));
+      const matchesFonte = !fonte || doc.source.toLowerCase() === fonte.toLowerCase();
+      return matchesQuery && matchesFonte;
+    });
+    return res.json({ documentos: filtered });
+  }
+
   const q = String(req.query.q || '').trim().slice(0, 200);
   const fonte = String(req.query.fonte || '').trim();
   const termos = q.split(/\s+/).filter(Boolean).slice(0, 8);
@@ -281,7 +462,6 @@ api.get('/documentos', handler(async (req, res) => {
 app.use('/api', api);
 app.use('/api', (_req, res) => res.status(404).json({ erro: 'Rota não encontrada.' }));
 
-// Em produção a API também serve o front gerado por `npm run build`.
 const dist = fileURLToPath(new URL('../dist', import.meta.url));
 if (existsSync(dist)) {
   app.use(express.static(dist));
