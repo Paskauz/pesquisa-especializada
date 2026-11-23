@@ -29,9 +29,8 @@ export default function HomeScreen() {
     catalog
   } = useApp();
 
-  // Cada card filtra pela fonte cadastrada no banco (recursos_rapidos.filtro_fonte_id).
   const openResource = (resource) => {
-    runSearch('', { fonte: resource.fonte, label: resource.title });
+    runSearch(resource.query || resource.title);
   };
 
   return (

@@ -1,6 +1,5 @@
 import {
   Bell,
-  Camera,
   Check,
   CreditCard,
   GraduationCap,
@@ -18,7 +17,6 @@ export default function ProfileScreen() {
     user,
     setUser,
     logout,
-    notify,
     setScreen,
     profileSection,
     setProfileSection,
@@ -45,19 +43,11 @@ export default function ProfileScreen() {
           <aside className="profile-summary">
             <div className="avatar-wrap">
               <div className="avatar avatar--lg">{user.initials}</div>
-              <button
-                type="button"
-                className="camera-btn"
-                title="Alterar foto"
-                onClick={() => notify('Upload de foto fica para uma etapa futura com backend.')}
-              >
-                <Camera size={14} />
-              </button>
             </div>
             <h2>{user.name}</h2>
-            <p style={{ fontSize: 12, color: '#6b7280' }}>Matrícula Unifor</p>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>Conta Firebase</p>
             <span className="status-pill">
-              <span className="live" /> Aluno Ativo
+              <span className="live" /> Conta ativa
             </span>
 
             <div className="profile-menu">
@@ -126,13 +116,6 @@ export default function ProfileScreen() {
                         value={user.email}
                         onChange={(event) => setUser({ ...user, email: event.target.value })}
                       />
-                    </div>
-                  </div>
-                  <div className="labeled-field">
-                    <label htmlFor="matricula">Matrícula Unifor</label>
-                    <div className="field field--disabled">
-                      <CreditCard />
-                      <input id="matricula" value={user.matricula} disabled />
                     </div>
                   </div>
                   <div className="labeled-field span-2">

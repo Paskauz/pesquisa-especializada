@@ -3,3 +3,12 @@ dist
 .DS_Store
 *.local
 .env
+.env.*
+!.env.example
+firebase.env
+.firebase
+service-account*.json
+firebase-service-account*.json
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*service-account*.json

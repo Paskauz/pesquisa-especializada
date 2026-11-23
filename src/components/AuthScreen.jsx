@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import {
-  CreditCard,
   Key,
   Lock,
   LogIn,
@@ -10,9 +9,6 @@ import {
   User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext.jsx';
-
-// Usuário criado pelo seed do banco (server/seed.mysql.sql).
-const DEMO = { email: 'gabriel@edu.unifor.br', password: '123456', matricula: '2110482' };
 
 function Field({ icon, ...inputProps }) {
   return (
@@ -27,11 +23,10 @@ export default function AuthScreen() {
   const { authTab, setAuthTab, signIn, signUp, forgotPassword } = useApp();
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    identifier: DEMO.email,
-    password: DEMO.password,
+    identifier: '',
+    password: '',
     name: '',
-    email: '',
-    matricula: DEMO.matricula
+    email: ''
   });
 
   const update = (key) => (event) => {
@@ -39,7 +34,7 @@ export default function AuthScreen() {
     setError('');
   };
 
-  // Executa a chamada à API e mostra o erro do servidor no formulário.
+  // Executa a operação de autenticação e mostra erros do Firebase no formulário.
   const run = (validate, action) => async (event) => {
     event.preventDefault();
     const problem = validate();
@@ -52,7 +47,7 @@ export default function AuthScreen() {
   };
 
   const submitLogin = run(
-    () => (!form.identifier.trim() || !form.password.trim() ? 'Preencha e-mail/usuário e senha para entrar.' : ''),
+    () => (!form.identifier.trim() || !form.password.trim() ? 'Preencha e-mail e senha para entrar.' : ''),
     () => signIn(form.identifier, form.password)
   );
 
@@ -64,11 +59,6 @@ export default function AuthScreen() {
   const submitForgot = run(
     () => (!form.email.trim() ? 'Informe o e-mail cadastrado.' : ''),
     () => forgotPassword(form.email)
-  );
-
-  const submitMatricula = run(
-    () => (!form.matricula.trim() || !form.password.trim() ? 'Informe matrícula e senha institucional.' : ''),
-    () => signIn(form.matricula, form.password)
   );
 
   return (
@@ -87,8 +77,8 @@ export default function AuthScreen() {
             </div>
             <Field
               icon={<Mail />}
-              type="text"
-              placeholder="E-mail ou usuário"
+              type="email"
+              placeholder="E-mail"
               value={form.identifier}
               onChange={update('identifier')}
             />
@@ -105,10 +95,6 @@ export default function AuthScreen() {
             </button>
             <button type="button" className="link-btn" onClick={() => setAuthTab('forgot')}>
               Esqueceu a senha?
-            </button>
-            <div className="divider">ou</div>
-            <button type="button" className="btn btn-secondary" onClick={() => setAuthTab('matricula')}>
-              <CreditCard size={16} /> Entrar com matrícula Unifor
             </button>
             <p className="footnote">
               Não tem conta?{' '}
@@ -167,43 +153,7 @@ export default function AuthScreen() {
           </form>
         )}
 
-        {authTab === 'matricula' && (
-          <form className="auth-form" onSubmit={submitMatricula}>
-            <div className="icon-circle">
-              <CreditCard size={20} />
-            </div>
-            <div className="screen-header">
-              <h1>Entrar com matrícula Unifor</h1>
-              <p>Use sua matrícula e senha institucional</p>
-            </div>
-            <Field
-              icon={<CreditCard />}
-              type="text"
-              placeholder="Matrícula Unifor"
-              value={form.matricula}
-              onChange={update('matricula')}
-            />
-            <Field
-              icon={<Lock />}
-              type="password"
-              placeholder="Senha"
-              value={form.password}
-              onChange={update('password')}
-            />
-            {error && <p className="form-error">{error}</p>}
-            <button type="submit" className="btn btn-primary">
-              <LogIn size={16} /> Entrar
-            </button>
-            <button type="button" className="link-btn" onClick={() => setAuthTab('login')}>
-              Voltar para o login
-            </button>
-          </form>
-        )}
       </section>
-
-      <p className="demo-hint">
-        Demo: use {DEMO.email} / {DEMO.password} (usuário criado pelo seed do banco).
-      </p>
     </div>
   );
 }

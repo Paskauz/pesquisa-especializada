@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
-// As chaves vêm do arquivo .env (veja .env.example). Elas identificam o projeto
-// no Firebase, não são segredos de servidor.
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -10,9 +9,14 @@ const config = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Sem chaves no .env o app continua funcionando só com o login antigo (API + MySQL).
-export const firebaseReady = Boolean(config.apiKey && config.projectId);
+export const firebaseReady = Object.values(config).every(Boolean);
+export const ssoProviderId = import.meta.env.VITE_FIREBASE_SSO_PROVIDER_ID?.trim() || '';
+export const ssoProtocol = import.meta.env.VITE_FIREBASE_SSO_PROTOCOL?.trim().toLowerCase() || '';
+export const firebaseSsoReady = firebaseReady && (
+  (ssoProtocol === 'saml' && ssoProviderId.startsWith('saml.')) ||
+  (ssoProtocol === 'oidc' && ssoProviderId.startsWith('oidc.'))
+);
 
 const app = firebaseReady ? initializeApp(config) : null;
 export const auth = app ? getAuth(app) : null;
-export const googleProvider = new GoogleAuthProvider();
+export const db = app ? getFirestore(app) : null;

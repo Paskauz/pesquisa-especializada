@@ -1,16 +1,4 @@
-/* Dados fictícios usados só na demonstração — não há API ou backend. */
-
-export const DEMO_USER = {
-  name: 'Gabriel Silva',
-  email: 'gabriel@edu.unifor.br',
-  password: '123456',
-  matricula: '2110482',
-  course: 'Ciência da Computação - CCT',
-  initials: 'GS',
-  notificationsEmail: true,
-  notificationsDocAlerts: true,
-  interests: ['Inteligência Artificial', 'Engenharia de Software']
-};
+/* Conteúdo inicial do catálogo; scripts/seed-firebase.js carrega estes dados no Firestore. */
 
 export const ALL_INTERESTS = [
   'Inteligência Artificial',

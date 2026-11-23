@@ -1,11 +1,36 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { api } from '../api.js';
+import {
+  OAuthProvider,
+  SAMLAuthProvider,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  updateProfile
+} from 'firebase/auth';
+import {
+  getUserProfile,
+  loadCatalog,
+  recordSearch,
+  saveUserProfile,
+  searchDocuments
+} from '../firebaseData.js';
+import { auth, firebaseReady, firebaseSsoReady, ssoProtocol, ssoProviderId } from '../firebase.js';
+import { friendlyError } from '../lib/firebaseErrors.js';
+import {
+  validateCredentials,
+  validateEmail,
+  validateSearchTerm,
+  validateSignupInput
+} from '../lib/validation.js';
 
 const AppContext = createContext(null);
 const EMPTY_CATALOG = { areas: [], termosPopulares: [], recursos: [], eventos: [] };
 
 export function AppProvider({ children }) {
-  const [booting, setBooting] = useState(true); // checando a sessão no servidor
+  const [booting, setBooting] = useState(true);
   const [screen, setScreen] = useState('login');
   const [authTab, setAuthTab] = useState('login');
   const [user, setUser] = useState(null);
@@ -26,54 +51,109 @@ export function AppProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const loadCatalog = async () => {
+  const loadUserCatalog = async () => {
     try {
-      setCatalog(await api('/catalogo'));
+      setCatalog(await loadCatalog());
     } catch (err) {
-      notify(err.message);
+      notify(friendlyError(err).message);
     }
   };
 
-  const enter = (usuario) => {
-    setUser(usuario);
+  const enter = async (profile) => {
+    setUser(profile);
     setScreen('home');
-    loadCatalog();
+    await loadUserCatalog();
   };
 
-  // Ao abrir o app, pergunta ao servidor se já existe sessão (cookie).
   useEffect(() => {
-    api('/me')
-      .then(({ usuario }) => enter(usuario))
-      .catch(() => {})
-      .finally(() => setBooting(false));
+    if (!firebaseReady || !auth) {
+      setBooting(false);
+      return undefined;
+    }
+
+    return onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setBooting(false);
+        return;
+      }
+
+      try {
+        const profile = await getUserProfile(firebaseUser);
+        await enter(profile);
+      } catch (err) {
+        setUser(null);
+        notify(friendlyError(err).message);
+      } finally {
+        setBooting(false);
+      }
+    });
   }, []);
 
-  const signIn = async (identificador, senha) => {
-    const { usuario } = await api('/auth/login', { method: 'POST', body: { identificador, senha } });
-    enter(usuario);
+  const signIn = async (email, password) => {
+    try {
+      const credentials = validateCredentials(email, password);
+      const { user: firebaseUser } = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      const profile = await getUserProfile(firebaseUser);
+      await enter(profile);
+    } catch (err) {
+      throw friendlyError(err);
+    }
   };
 
-  const signUp = async (nome, email, senha) => {
-    const { usuario } = await api('/auth/signup', { method: 'POST', body: { nome, email, senha } });
-    enter(usuario);
-    notify('Conta criada com sucesso.');
+  const signUp = async (name, email, password) => {
+    try {
+      const input = validateSignupInput(name, email, password);
+      const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, input.email, input.password);
+      await updateProfile(firebaseUser, { displayName: input.name });
+      const profile = await getUserProfile(firebaseUser);
+      await enter(profile);
+      notify('Conta criada com sucesso.');
+    } catch (err) {
+      throw friendlyError(err);
+    }
   };
 
   const forgotPassword = async (email) => {
-    const { mensagem } = await api('/auth/forgot', { method: 'POST', body: { email } });
-    notify(mensagem);
-    setAuthTab('login');
+    try {
+      await sendPasswordResetEmail(auth, validateEmail(email));
+      notify('Se o e-mail estiver cadastrado, você receberá um link de redefinição.');
+      setAuthTab('login');
+    } catch (err) {
+      throw friendlyError(err);
+    }
+  };
+
+  const signInInstitutional = async () => {
+    if (!firebaseSsoReady) {
+      throw new Error('O SSO institucional ainda não foi configurado pela TI da Unifor.');
+    }
+    try {
+      const provider = ssoProtocol === 'saml'
+        ? new SAMLAuthProvider(ssoProviderId)
+        : new OAuthProvider(ssoProviderId);
+      const { user: firebaseUser } = await signInWithPopup(auth, provider);
+      const profile = await getUserProfile(firebaseUser);
+      await enter(profile);
+    } catch (err) {
+      throw friendlyError(err);
+    }
   };
 
   const logout = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => {});
-    setUser(null);
-    setScreen('login');
-    setAuthTab('login');
-    setActiveQuery('');
-    setSearchQuery('');
-    setSearchResults([]);
-    notify('Você saiu da conta.');
+    try {
+      await signOut(auth);
+      setUser(null);
+      setScreen('login');
+      setAuthTab('login');
+      setActiveQuery('');
+      setSearchQuery('');
+      setSearchResults([]);
+      setCatalog(EMPTY_CATALOG);
+      notify('Você saiu da conta.');
+    } catch (err) {
+      notify(friendlyError(err).message);
+    }
   };
 
   const goHome = () => {
@@ -81,66 +161,72 @@ export function AppProvider({ children }) {
     setScreen('home');
   };
 
-  // filter: { fonte, label } — usado pelos cards de Acesso Rápido.
   const runSearch = async (term = searchQuery, filter = null) => {
-    const query = term.trim();
-    setSearchQuery(query);
+    let queryText;
+    try {
+      queryText = validateSearchTerm(term);
+    } catch (err) {
+      notify(friendlyError(err).message);
+      return;
+    }
+    setSearchQuery(queryText);
     setScreen('home');
-    if (!query && !filter) {
+    if (!queryText && !filter) {
       setActiveQuery('');
       setSearchResults([]);
       notify('Digite um termo para pesquisar.');
       return;
     }
-    setActiveQuery(query || filter.label);
+    setActiveQuery(queryText || filter.label);
     setSearching(true);
     try {
-      const params = new URLSearchParams();
-      if (query) params.set('q', query);
-      if (filter?.fonte) params.set('fonte', filter.fonte);
-      const { documentos } = await api(`/documentos?${params}`);
-      setSearchResults(documentos);
+      const documents = await searchDocuments(queryText || filter?.query || '', filter?.fonte || '');
+      setSearchResults(documents);
+      if (queryText && auth.currentUser) {
+        recordSearch(auth.currentUser.uid, queryText, documents.length)
+          .catch((err) => notify(friendlyError(err).message));
+      }
     } catch (err) {
       setSearchResults([]);
-      notify(err.message);
+      notify(friendlyError(err).message);
     } finally {
       setSearching(false);
     }
   };
 
   const toggleInterest = (interest) => {
-    setUser((prev) => {
-      const selected = prev.interests.includes(interest)
-        ? prev.interests.filter((item) => item !== interest)
-        : [...prev.interests, interest];
-      return { ...prev, interests: selected };
+    setUser((previous) => {
+      if (!previous) return previous;
+      const interests = previous.interests.includes(interest)
+        ? previous.interests.filter((item) => item !== interest)
+        : [...previous.interests, interest];
+      return { ...previous, interests };
     });
   };
 
   const saveProfile = async () => {
     try {
-      const { usuario } = await api('/me', { method: 'PUT', body: user });
-      setUser(usuario);
+      const profile = await saveUserProfile(auth.currentUser, user);
+      setUser(profile);
       notify('Alterações salvas.');
     } catch (err) {
-      notify(err.message);
+      notify(friendlyError(err).message);
     }
   };
 
-  // Descarta edições não salvas recarregando o perfil do servidor.
   const reloadUser = async () => {
+    if (!auth.currentUser) return;
     try {
-      const { usuario } = await api('/me');
-      setUser(usuario);
-    } catch {
-      /* mantém o estado atual */
+      setUser(await getUserProfile(auth.currentUser));
+    } catch (err) {
+      notify(friendlyError(err).message);
     }
   };
 
   const value = {
     booting, screen, setScreen, authTab, setAuthTab,
     user, setUser, isLogged, catalog,
-    signIn, signUp, forgotPassword, logout, goHome,
+    signIn, signUp, forgotPassword, signInInstitutional, logout, goHome,
     toggleInterest, saveProfile, reloadUser,
     searchQuery, setSearchQuery, activeQuery, runSearch, searchResults, searching,
     toast, notify, profileSection, setProfileSection
@@ -150,7 +236,7 @@ export function AppProvider({ children }) {
 }
 
 export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp deve ser usado dentro de AppProvider');
-  return ctx;
+  const context = useContext(AppContext);
+  if (!context) throw new Error('useApp deve ser usado dentro de AppProvider');
+  return context;
 }
