@@ -128,13 +128,23 @@ export async function loadCatalog() {
     loadCollection('events')
   ]);
   if (!areas.length || !quickResources.length) {
-    throw new Error('O catálogo do Firestore está vazio. Execute npm run sync:catalog.');
+    throw new Error('O catálogo do Firestore está vazio. Execute npm run seed:firebase.');
   }
   const validAreas = areas.map(validateAreaRecord);
   const validPopularSearches = popularSearches.map(validatePopularSearchRecord);
   const validResources = quickResources.map(validateQuickResourceRecord);
   const today = new Date().toISOString().slice(0, 10);
-  const validEvents = events.map(validateEventRecord).filter((event) => event.startDate >= today);
+  const validEvents = events
+    .map((event) => {
+      try {
+        return validateEventRecord(event);
+      } catch {
+        // Um registro de evento inválido não deve impedir o restante do catálogo.
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .filter((event) => event.startDate >= today);
   return {
     areas: validAreas.map((item) => item.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     termosPopulares: validPopularSearches

@@ -52,10 +52,30 @@ export const QUICK_RESOURCES = [
 ];
 
 export const EVENTS = [
-  { day: '18', month: 'OUT', title: 'Mundo Unifor 2024', place: 'Teatro Celina Queiroz', tag: 'Científico' },
-  { day: '22', month: 'OUT', title: 'Encontros Científicos', place: 'Blocos de Pós-Graduação', tag: 'Pesquisa' },
-  { day: '05', month: 'NOV', title: 'Exposição Espaço Cultural', place: 'Espaço Cultural Unifor', tag: 'Cultura' },
-  { day: '12', month: 'NOV', title: 'Feira de Carreiras & Estágios', place: 'Centro de Convivência', tag: 'Carreira' }
+  {
+    startDate: '2027-03-18',
+    title: 'Mostra de Pesquisa (evento de demonstração)',
+    place: 'Espaço de eventos do campus',
+    tag: 'Pesquisa'
+  },
+  {
+    startDate: '2027-04-22',
+    title: 'Encontro de Iniciação Científica (evento de demonstração)',
+    place: 'Auditório universitário',
+    tag: 'Pesquisa'
+  },
+  {
+    startDate: '2027-05-05',
+    title: 'Exposição de Projetos Estudantis (evento de demonstração)',
+    place: 'Espaço cultural do campus',
+    tag: 'Cultura'
+  },
+  {
+    startDate: '2027-06-12',
+    title: 'Feira de Carreiras e Estágios (evento de demonstração)',
+    place: 'Centro de convivência',
+    tag: 'Carreira'
+  }
 ];
 
 export const DOCUMENTS = [

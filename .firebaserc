@@ -1,6 +1,5 @@
 {
   "projects": {
-    "defaut": "pesquisa-especializada",
     "default": "pesquisa-especializada"
   },
   "targets": {},

@@ -9,6 +9,7 @@ import {
   validateSearchTerm,
   validateSignupInput
 } from './validation.js';
+import { EVENTS } from '../data/catalogSeed.js';
 
 test('credentials normalize email and reject malformed input', () => {
   assert.deepEqual(validateCredentials('  TEST@EXAMPLE.COM ', 'abc'), {
@@ -62,4 +63,13 @@ test('catalog validators reject invalid external links and incomplete records', 
     source: 'Revista',
     url: 'https://example.com'
   }), /índice de busca/);
+});
+
+test('sample catalog events have valid dates and remain visible in the agenda', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  assert.ok(EVENTS.length > 0);
+  for (const event of EVENTS) {
+    assert.doesNotThrow(() => validateEventRecord(event));
+    assert.ok(event.startDate >= today, `${event.title} should not be in the past`);
+  }
 });
