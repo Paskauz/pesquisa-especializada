@@ -10,22 +10,26 @@
 }
 
 .search-hero {
-  background: #fff;
+  background: linear-gradient(135deg, #fff 0%, var(--accent-bg) 100%);
   border-radius: var(--radius-lg);
   padding: 32px;
   box-shadow: var(--shadow);
   margin-bottom: 24px;
+  border: 1px solid var(--border-soft);
 }
 
 .search-hero h1 {
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: 800;
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
 .search-hero p {
   color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 20px;
+  font-size: 15px;
+  margin-bottom: 24px;
+  line-height: 1.6;
 }
 
 .search-box {
@@ -81,10 +85,23 @@
   color: var(--accent);
 }
 
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
 .section-title {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 16px;
+  letter-spacing: -0.01em;
 }
 
 .resources-grid {
@@ -98,46 +115,69 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.resource-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent-border);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: var(--accent-bg);
   color: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .resource-card h3 {
   font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .resource-card p {
   font-size: 13px;
   color: var(--text-secondary);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  line-height: 1.5;
 }
 
 .card-link {
   color: var(--accent);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   background: none;
   border: none;
+  margin-top: auto;
+}
+
+.card-link:hover {
+  color: var(--accent-hover);
+  gap: 8px;
 }
 
 .sidebar {
@@ -150,21 +190,38 @@
   background: #fff;
   border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-soft);
+}
+
+.event-card h3 {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.event-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
 }
 
 .event-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 12px;
 }
 
 .event-item {
   display: flex;
-  gap: 16px;
-  padding-bottom: 16px;
+  gap: 14px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--border-soft);
+  align-items: flex-start;
 }
 
 .event-item:last-child {
@@ -174,29 +231,38 @@
 
 .date-badge {
   background: var(--accent-bg);
-  color: var(--accent);
-  border-radius: 10px;
-  padding: 8px 12px;
+  color: var(--accent-hover);
+  border-radius: 12px;
+  padding: 10px 12px;
   text-align: center;
-  min-width: 54px;
-  height: max-content;
+  min-width: 56px;
+  flex-shrink: 0;
+  border: 1px solid var(--accent-border);
 }
 
 .date-badge .day {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   display: block;
+  line-height: 1;
 }
 
 .date-badge .month {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.event-info {
+  flex: 1;
 }
 
 .event-info h4 {
   font-size: 14px;
+  font-weight: 700;
   margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
 
 .event-info p {
@@ -205,17 +271,19 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-bottom: 6px;
 }
 
 .badge-tag {
-  display: inline-block;
-  background: #e0e7ff;
-  color: #4338ca;
+  display: inline-flex;
+  align-items: center;
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 12px;
-  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
 }
 
 .results-list {
@@ -227,29 +295,50 @@
 .result-card {
   background: #fff;
   border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 16px 18px;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.result-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  border-color: var(--accent-border);
 }
 
 .result-card h3 {
-  font-size: 15px;
-  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
 }
 
 .result-meta {
-  font-size: 12px;
-  color: var(--text-secondary);
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.result-meta span {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
 }
 
 .empty-state {
   background: #fff;
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: 14px;
+  padding: 32px 24px;
   color: var(--text-secondary);
   font-size: 14px;
+  text-align: center;
+  border: 2px dashed var(--border-soft);
 }
 
 @media (max-width: 900px) {

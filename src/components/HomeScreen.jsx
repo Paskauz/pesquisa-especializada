@@ -18,6 +18,19 @@ const ICONS = {
   award: Award
 };
 
+const RESOURCE_COLORS = {
+  acervo: { color: '#10b981', bg: '#ecfdf5' },
+  trabalhos: { color: '#3b82f6', bg: '#eff6ff' },
+  monitoria: { color: '#f59e0b', bg: '#fffbeb' },
+  ic: { color: '#a855f7', bg: '#faf5ff' }
+};
+
+const EVENT_TAG_COLORS = {
+  Pesquisa: { color: '#3b82f6', bg: '#eff6ff' },
+  Cultura: { color: '#10b981', bg: '#ecfdf5' },
+  Carreira: { color: '#f59e0b', bg: '#fffbeb' }
+};
+
 export default function HomeScreen() {
   const {
     searchQuery,
@@ -39,7 +52,10 @@ export default function HomeScreen() {
       <div className="page-main">
         <main>
           <section className="search-hero">
-            <h1>O que você quer pesquisar hoje?</h1>
+            <div className="section-badge">
+              <Search size={14} /> Busca acadêmica Unifor
+            </div>
+            <h1 className="gradient-text">O que você quer pesquisar hoje?</h1>
             <p>
               Acesse teses, artigos de iniciação científica, acervos e monitorias da Unifor em um só lugar.
             </p>
@@ -113,11 +129,12 @@ export default function HomeScreen() {
               <div className="resources-grid">
                 {catalog.recursos.map((resource) => {
                   const Icon = ICONS[resource.icon];
+                  const conf = RESOURCE_COLORS[resource.id] || { color: '#6b7280', bg: '#f3f4f6' };
                   return (
                     <article key={resource.id} className="card resource-card">
                       <div>
                         <div className="card-header">
-                          <div className="card-icon">
+                          <div className="card-icon" style={{ background: conf.bg, color: conf.color }}>
                             <Icon size={20} />
                           </div>
                           <h3>{resource.title}</h3>
@@ -145,21 +162,26 @@ export default function HomeScreen() {
               Principais eventos acadêmicos e culturais
             </p>
             <div className="event-list">
-              {catalog.eventos.map((event) => (
-                <div key={event.id} className="event-item">
-                  <div className="date-badge">
-                    <span className="day">{event.day}</span>
-                    <span className="month">{event.month}</span>
+              {catalog.eventos.map((event) => {
+                const conf = EVENT_TAG_COLORS[event.tag] || { color: '#6b7280', bg: '#f3f4f6' };
+                return (
+                  <div key={event.id} className="event-item">
+                    <div className="date-badge">
+                      <span className="day">{event.day}</span>
+                      <span className="month">{event.month}</span>
+                    </div>
+                    <div className="event-info">
+                      <h4>{event.title}</h4>
+                      <p>
+                        <MapPin size={12} /> {event.place}
+                      </p>
+                      <span className="badge-tag" style={{ background: conf.bg, color: conf.color, border: `1px solid ${conf.color === '#6b7280' ? '#e5e7eb' : conf.color}` }}>
+                        {event.tag}
+                      </span>
+                    </div>
                   </div>
-                  <div className="event-info">
-                    <h4>{event.title}</h4>
-                    <p>
-                      <MapPin size={12} /> {event.place}
-                    </p>
-                    <span className="badge-tag">{event.tag}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </aside>

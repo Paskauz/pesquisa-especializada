@@ -87,30 +87,39 @@ export default function AuthScreen() {
     selectUserType(type);
   };
 
+  const TYPE_COLORS = {
+    visitante: { color: '#10b981', bg: '#ecfdf5' },
+    estudante: { color: '#3b82f6', bg: '#eff6ff' },
+    palestrante: { color: '#a855f7', bg: '#faf5ff' }
+  };
+
+  const TYPE_ICONS = {
+    visitante: <User size={24} />,
+    estudante: <GraduationCap size={24} />,
+    palestrante: <Mic size={24} />
+  };
+
   const TYPES = [
     {
       id: 'visitante',
       label: 'Visitante',
-      icon: <User size={24} />,
       description: 'Usuário comum sem vínculo institucional',
-      email: 'E-mail',
-      action: 'Entrar com e-mail e senha'
+      placeholder: 'E-mail',
+      action: 'E-mail e senha'
     },
     {
       id: 'estudante',
       label: 'Estudante',
-      icon: <GraduationCap size={24} />,
       description: 'Acesso via matrícula institucional',
-      email: 'Matrícula institucional',
-      action: 'Entrar com matrícula e senha'
+      placeholder: 'Matrícula institucional',
+      action: 'Matrícula e senha'
     },
     {
       id: 'palestrante',
       label: 'Palestrante',
-      icon: <Mic size={24} />,
       description: 'Acesso para palestrantes e convidados',
-      email: 'E-mail',
-      action: 'Entrar com e-mail e senha'
+      placeholder: 'E-mail',
+      action: 'E-mail e senha'
     }
   ];
 
@@ -125,41 +134,42 @@ export default function AuthScreen() {
 
         <section className="auth-card">
           <div className="screen-header">
-            <h1>Escolha seu perfil</h1>
-            <p>Selecione o tipo de usuário para continuar</p>
+            <h1 className="gradient-text">Escolha seu perfil</h1>
+            <p>Selecione quem você é para continuar</p>
           </div>
 
           <div className="type-grid">
-            {TYPES.map((type) => (
-              <button
-                key={type.id}
-                type="button"
-                className={`type-card ${type.id === 'visitante' ? 'is-active' : ''}`}
-                onClick={() => chooseType(type.id)}
-              >
-                <div className="type-icon">{type.icon}</div>
-                <h3>{type.label}</h3>
-                <p className="type-desc">{type.description}</p>
-                <span className="type-arrow">
-                  {type.action} <ArrowRight size={14} />
-                </span>
-              </button>
-            ))}
+            {TYPES.map((type) => {
+              const conf = TYPE_COLORS[type.id] ?? TYPE_COLORS.visitante;
+              const icon = TYPE_ICONS[type.id] ?? TYPE_ICONS.visitante;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  className={`type-card ${type.id === 'visitante' ? 'is-active' : ''}`}
+                  style={{ borderColor: conf.color }}
+                  onClick={() => chooseType(type.id)}
+                >
+                  <div className="type-icon" style={{ color: conf.color, background: conf.bg }}>
+                    {icon}
+                  </div>
+                  <h3>{type.label}</h3>
+                  <p className="type-desc">{type.description}</p>
+                  <span className="type-arrow" style={{ color: conf.color }}>
+                    {type.action} <ArrowRight size={14} />
+                  </span>
+                </button>
+              );
+            })}
           </div>
-
-          <p className="footnote">
-            Já escolheu seu perfil?{' '}
-            <button type="button" className="link-btn" onClick={clearUserType}>
-              Voltar à escolha
-            </button>
-          </p>
         </section>
       </div>
     );
   }
 
   const isUnavailable = userType === 'estudante' || userType === 'palestrante';
-  const backLabel = 'Escolher outro perfil';
+  const conf = userType ? TYPE_COLORS[userType] : TYPE_COLORS.visitante;
+  const backLabel = 'Voltar à escolha de perfil';
   const titleByType = {
     visitante: 'Entrar',
     estudante: 'Entrar como Estudante',
@@ -188,7 +198,7 @@ export default function AuthScreen() {
           type="button"
           className="back-btn"
           onClick={clearUserType}
-          title="Escolher outro perfil"
+          title="Voltar à escolha de perfil"
         >
           <ArrowLeft size={14} /> {backLabel}
         </button>
@@ -196,7 +206,7 @@ export default function AuthScreen() {
         {authTab === 'login' && (
           <form className="auth-form" onSubmit={isUnavailable ? submitUnavailable : submitLogin}>
             <div className="screen-header">
-              <h1>{titleByType[userType]}</h1>
+              <h1 className="gradient-text">{titleByType[userType]}</h1>
               <p>{subtitleByType[userType]}</p>
             </div>
             <Field
@@ -217,6 +227,12 @@ export default function AuthScreen() {
             <button type="submit" className="btn btn-primary" disabled={isUnavailable}>
               <LogIn size={16} /> {isUnavailable ? 'Método indisponível' : 'Entrar'}
             </button>
+            {isUnavailable && (
+              <p className="form-error" style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                <span style={{ fontSize: 16 }}>⚠</span>
+                Esta forma de acesso ainda não está disponível para {userType}s.
+              </p>
+            )}
             {!isUnavailable && (
               <>
                 <button type="button" className="link-btn" onClick={() => setAuthTab('forgot')}>
@@ -236,8 +252,8 @@ export default function AuthScreen() {
         {!isUnavailable && authTab === 'signup' && (
           <form className="auth-form" onSubmit={submitSignup}>
             <div className="screen-header">
-              <h1>Criar conta</h1>
-              <p>Preencha os dados para se cadastrar</p>
+              <h1 className="gradient-text">Criar conta</h1>
+              <p>Junte-se à busca especializada da Unifor</p>
             </div>
             <Field icon={<User />} type="text" placeholder="Nome completo" value={form.name} onChange={update('name')} />
             <Field icon={<Mail />} type="email" placeholder="E-mail" value={form.email} onChange={update('email')} />
@@ -261,7 +277,7 @@ export default function AuthScreen() {
               <Key size={20} />
             </div>
             <div className="screen-header">
-              <h1>Esqueceu a senha?</h1>
+              <h1 className="gradient-text">Esqueceu a senha?</h1>
               <p>Informe seu e-mail para receber o link de redefinição</p>
             </div>
             <Field
