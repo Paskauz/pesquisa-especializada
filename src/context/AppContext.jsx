@@ -50,13 +50,13 @@ export function AppProvider({ children }) {
   const selectUserType = (type) => {
     setUserTypeState(type);
     setAuthTab('login');
-    setError('');
+    setAuthError('');
   };
 
   const clearUserType = () => {
     setUserTypeState(null);
     setAuthTab('login');
-    setError('');
+    setAuthError('');
   };
 
   useEffect(() => {
