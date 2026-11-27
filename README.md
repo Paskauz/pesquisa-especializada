@@ -48,6 +48,8 @@ O script é idempotente e carrega as coleções `areas`, `popularSearches`, `qui
 
 ## Publicação
 
+### Opção recomendada: Firebase Hosting
+
 Associe o diretório ao projeto Firebase e publique hosting e regras:
 
 ```bash
@@ -58,6 +60,17 @@ npx firebase-tools deploy --only hosting,firestore:rules
 ```
 
 Cadastre o domínio de produção em **Authentication → Settings → Authorized domains**. As credenciais Web do Firebase são públicas por natureza; proteja os dados com as regras do Firestore e restrições da chave de API.
+
+### Publicação automática pelo GitHub
+
+Os workflows em `.github/workflows` podem publicar o mesmo build em dois destinos:
+
+- `github-pages.yml`: publica em `https://paskauz.github.io/pesquisa-especializada/`.
+- `firebase-hosting.yml`: publica no endereço Firebase configurado no projeto.
+
+Em **GitHub → Settings → Secrets and variables → Actions**, cadastre os secrets `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` e `VITE_FIREBASE_APP_ID`. Para o workflow Firebase, cadastre também `FIREBASE_SERVICE_ACCOUNT` com o conteúdo completo do JSON da conta de serviço.
+
+Depois, habilite **Settings → Pages → Build and deployment → Source: GitHub Actions**. Cada push em `main` fará o deploy automático nos workflows que tiverem os secrets necessários.
 
 ## Estrutura
 
