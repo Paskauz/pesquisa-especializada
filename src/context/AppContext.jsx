@@ -41,9 +41,23 @@ export function AppProvider({ children }) {
   const [searching, setSearching] = useState(false);
   const [toast, setToast] = useState('');
   const [profileSection, setProfileSection] = useState('pessoal');
+  const [userType, setUserTypeState] = useState<'visitante' | 'estudante' | 'palestrante' | null>(null);
+  const [authError, setAuthError] = useState('');
 
   const isLogged = Boolean(user);
   const notify = (message) => setToast(message);
+
+  const selectUserType = (type) => {
+    setUserTypeState(type);
+    setAuthTab('login');
+    setError('');
+  };
+
+  const clearUserType = () => {
+    setUserTypeState(null);
+    setAuthTab('login');
+    setError('');
+  };
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -229,7 +243,8 @@ export function AppProvider({ children }) {
     signIn, signUp, forgotPassword, signInInstitutional, logout, goHome,
     toggleInterest, saveProfile, reloadUser,
     searchQuery, setSearchQuery, activeQuery, runSearch, searchResults, searching,
-    toast, notify, profileSection, setProfileSection
+    toast, notify, profileSection, setProfileSection,
+    userType, selectUserType, clearUserType, authError, setAuthError
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
